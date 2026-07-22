@@ -508,9 +508,9 @@ class OpenAILLM(BaseLLM):
         try:
             import openai
 
-            client_kwargs = {}
-            if self.api_key:
-                client_kwargs["api_key"] = self.api_key
+            client_kwargs = {
+                "api_key": self.api_key if self.api_key else "no-key-required"
+            }
             if self.base_url:
                 client_kwargs["base_url"] = self.base_url
 
@@ -1081,20 +1081,42 @@ class LLMRouter(BaseLLM):
         return a.chat_with_tools(messages, tools, **kwargs)
 
 
+DEFAULT_LLM_PROFILES = {
+    "llama-server": {
+        "llm_endpoint": "http://127.0.0.1:8081/v1",
+        "llm_service_class": "OpenAILLM",
+        "llm_context_size": 8192,
+    },
+    "ollama": {
+        "llm_endpoint": "http://127.0.0.1:11434/v1",
+        "llm_service_class": "OpenAILLM",
+        "llm_context_size": 8192,
+    },
+    "lm-studio": {
+        "llm_endpoint": "http://127.0.0.1:1234/v1",
+        "llm_service_class": "OpenAILLM",
+        "llm_context_size": 8192,
+    },
+}
+
+
 def build_services(config: dict) -> dict:
     """Register one service per LLM (keyed by model name) plus the ``llm``
     router that resolves to the default LLM.
     """
 
     services: dict = {}
-    profiles = config.get("llm_profiles", {}) or {}
+    profiles = config.get("llm_profiles", {})
+    if not profiles:
+        config["llm_profiles"] = dict(DEFAULT_LLM_PROFILES)
+        profiles = config["llm_profiles"]
 
     for model_name, pconf in profiles.items():
         services[model_name] = _build_llm_from_profile(model_name, pconf)
 
     # Pick a default LLM if none is set.
     if not config.get("default_llm_profile") and profiles:
-        config["default_llm_profile"] = next(iter(profiles))
+        config["default_llm_profile"] = "llama-server" if "llama-server" in profiles else next(iter(profiles))
 
     services["llm"] = LLMRouter(config, services)
     return services

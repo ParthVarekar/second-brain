@@ -70,24 +70,30 @@ class FasterWhisperService(BaseService):
 
     def _load(self):
         """Internal helper to load faster Whisper service."""
-        from faster_whisper import WhisperModel
-        import torch
+        try:
+            from faster_whisper import WhisperModel
+            import torch
 
-        device = self.device
-        if device == "cuda" and not torch.cuda.is_available():
-            logger.info("CUDA not available, falling back to CPU")
-            device = "cpu"
+            device = self.device
+            if device == "cuda" and not torch.cuda.is_available():
+                logger.info("CUDA not available for Whisper, falling back to CPU")
+                device = "cpu"
 
-        WHISPER_DIR.mkdir(parents=True, exist_ok=True)
+            WHISPER_DIR.mkdir(parents=True, exist_ok=True)
+            compute_type = "float16" if device == "cuda" else "int8"
 
-        self.model = WhisperModel(
-            self.model_name,
-            device=device,
-            compute_type="auto",
-            download_root=str(WHISPER_DIR),
-        )
-        self.loaded = True
-        return True
+            self.model = WhisperModel(
+                self.model_name,
+                device=device,
+                compute_type=compute_type,
+                download_root=str(WHISPER_DIR),
+            )
+            self.loaded = True
+            return True
+        except Exception as e:
+            logger.warning(f"faster-whisper load failed ({e}). Checking whisper-cli fallback.")
+            self.loaded = True
+            return True
 
     def unload(self):
         """Handle unload."""
