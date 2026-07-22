@@ -29,11 +29,13 @@ _DEFAULT_PLUGIN_CONFIG_PATH = str(DATA_DIR / "plugin_config.json")
 def _normalize_frontends(value) -> list[str]:
     """Normalize enabled_frontends to non-empty string frontend names."""
     if not isinstance(value, list):
-        return list(DEFAULTS.get("enabled_frontends", ["repl", "web"]))
+        return list(DEFAULTS.get("enabled_frontends", ["repl", "telegram"]))
 
     normalized = []
     seen = set()
     for item in value:
+        if item in (None, ""):
+            continue
         name = str(item).strip().lower()
         if not name or name in seen:
             continue
@@ -59,9 +61,13 @@ def load(path: str = None) -> dict:
         save(DEFAULTS, path)
         return dict(DEFAULTS)
 
-    with open(p, "r") as f:
-        logger.info(f"Loading config from {p}")
-        user_config = json.load(f)
+    try:
+        with open(p, "r") as f:
+            logger.info(f"Loading config from {p}")
+            user_config = json.load(f)
+    except Exception as e:
+        logger.warning(f"Corrupted or unreadable config file at {p} ({e}). Falling back to defaults.")
+        user_config = {}
 
     # If new settings are added, this adds them to the existing config.json
     merged = dict(DEFAULTS)
