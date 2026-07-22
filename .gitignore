@@ -1,0 +1,16 @@
+__pycache__/
+.pytest_cache/
+pytest-cache-files-*/
+*.tmp
+*.log
+.venv/
+.installed
+config.json
+plugin_config.json
+database.db*
+.VSCodeCounter
+.claude
+.codex_smoke/
+.codex_pytest_tmp/
+.DS_Store
+.vscode
